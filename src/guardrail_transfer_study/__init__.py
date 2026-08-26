@@ -20,9 +20,31 @@ from .instrument import (
     observe,
     real_gap,
 )
+from .power import (
+    PowerResult,
+    crossover_sample_size,
+    detectable_gap,
+    interval_width,
+    power_at,
+    required_prompts_for_width,
+    wilson_interval,
+)
+from .probe import PROBES, Probe, ProbeResult, estimate_with_probe, max_tolerable_false_pass
 
 __all__ = [
     "CONDITIONS",
+    "PROBES",
+    "PowerResult",
+    "Probe",
+    "ProbeResult",
+    "crossover_sample_size",
+    "detectable_gap",
+    "estimate_with_probe",
+    "interval_width",
+    "max_tolerable_false_pass",
+    "power_at",
+    "required_prompts_for_width",
+    "wilson_interval",
     "Condition",
     "MIXED_CONDITIONS",
     "Observation",

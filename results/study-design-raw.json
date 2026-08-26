@@ -1,0 +1,93 @@
+{
+  "budget_prompts": 400,
+  "target_width": 0.05,
+  "tolerance": 0.01,
+  "power": {
+    "text-primary": {
+      "usable": 396,
+      "naive_bias": 0.0020000000000000018,
+      "naive_error": 0.04093551735771672,
+      "conditioned_error": 0.03927684727739489,
+      "conditioning_pays": true
+    },
+    "text-secondary": {
+      "usable": 336,
+      "naive_bias": 0.03200000000000003,
+      "naive_error": 0.06855793414975875,
+      "conditioned_error": 0.042616420626355955,
+      "conditioning_pays": true
+    },
+    "text-low-resource": {
+      "usable": 244,
+      "naive_bias": 0.07799999999999996,
+      "naive_error": 0.11017832885995571,
+      "conditioned_error": 0.05009145042510066,
+      "conditioning_pays": true
+    },
+    "image-primary": {
+      "usable": 288,
+      "naive_bias": 0.05599999999999994,
+      "naive_error": 0.0905070088870682,
+      "conditioned_error": 0.04617925191182348,
+      "conditioning_pays": true
+    },
+    "image-low-resource": {
+      "usable": 152,
+      "naive_bias": 0.124,
+      "naive_error": 0.15000546591914854,
+      "conditioned_error": 0.06293383186577894,
+      "conditioning_pays": true
+    }
+  },
+  "prompts_for_target_width": {
+    "text-primary": 1000,
+    "text-secondary": 1180,
+    "text-low-resource": 1620,
+    "image-primary": 1380,
+    "image-low-resource": 2600
+  },
+  "max_false_pass": {
+    "text-primary": 0.9950000000000008,
+    "text-secondary": 0.27500000000000013,
+    "text-low-resource": 0.08,
+    "image-primary": 0.13500000000000004,
+    "image-low-resource": 0.030000000000000002
+  },
+  "probe_residual_bias": {
+    "text-primary": {
+      "ideal": 0.0,
+      "slightly-easy": 0.0003087372645877995,
+      "too-easy": 0.0009233610341643494,
+      "too-hard": 5.3857546788771415e-05,
+      "correlated-hard": 5.403762369549092e-05
+    },
+    "text-secondary": {
+      "ideal": 0.0,
+      "slightly-easy": 0.0056657223796034994,
+      "too-easy": 0.01608579088471862,
+      "too-hard": 0.001010739102969005,
+      "correlated-hard": 0.001067378252168183
+    },
+    "text-low-resource": {
+      "ideal": 0.0,
+      "slightly-easy": 0.017827213164711253,
+      "too-easy": 0.045389887495150605,
+      "too-hard": 0.0033526756931012702,
+      "correlated-hard": 0.0038440214378118176
+    },
+    "image-primary": {
+      "ideal": -1.1102230246251565e-16,
+      "slightly-easy": 0.011235955056179692,
+      "too-easy": 0.030303030303030276,
+      "too-hard": 0.002052785923753575,
+      "correlated-hard": 0.0022617124394184174
+    },
+    "image-low-resource": {
+      "ideal": 1.1102230246251565e-16,
+      "slightly-easy": 0.039965620971207594,
+      "too-easy": 0.0856616518268346,
+      "too-hard": 0.008338937457968987,
+      "correlated-hard": 0.010398322851153052
+    }
+  }
+}

@@ -70,6 +70,74 @@ them here.
 **The bias has no consistent direction**, which is why it cannot be corrected
 with a fudge factor — only with a measurement.
 
+## Case 3: what the correction costs
+
+The estimator being unbiased is not sufficient. It works by **discarding
+observations** — only inputs the model demonstrably parsed are counted — so it
+buys accuracy with precision. At a 400-prompt budget:
+
+| condition | legibility | usable | naive error | conditioned error | worth it |
+|---|---|---|---|---|---|
+| `text-primary` | 0.99 | 396 | 0.041 | **0.039** | yes |
+| `text-secondary` | 0.84 | 336 | 0.069 | **0.043** | yes |
+| `text-low-resource` | 0.61 | 244 | 0.110 | **0.050** | yes |
+| `image-primary` | 0.72 | 288 | 0.091 | **0.046** | yes |
+| `image-low-resource` | 0.38 | 152 | 0.150 | **0.063** | yes |
+
+*Error* is bias plus half the interval width — how far the estimate can sit from
+the truth. The conditioned interval is genuinely **wider** in every condition,
+and the correction still pays everywhere, because the bias it removes exceeds
+the precision it gives up.
+
+The planning consequence is sharper. For a 5-point interval:
+
+| condition | legibility | prompts needed |
+|---|---|---|
+| `text-primary` | 0.99 | 1,000 |
+| `image-low-resource` | 0.38 | **2,600** |
+
+**The least legible condition needs 2.6x the prompts** for the same precision. A
+study that budgets uniformly across conditions is underpowered in exactly the
+conditions carrying its finding.
+
+## Case 4: the probe is an instrument too
+
+Every result above assumes the comprehension probe is valid. That assumption is
+doing all the work. Residual bias on `image-low-resource` under probes of
+varying quality:
+
+| probe | false pass | false fail | residual bias |
+|---|---|---|---|
+| `ideal` | 0.00 | 0.00 | +0.0000 |
+| `slightly-easy` | 0.15 | 0.02 | +0.0400 |
+| `too-easy` | 0.45 | 0.02 | **+0.0857** |
+| `too-hard` | 0.02 | 0.25 | +0.0083 |
+| `correlated-hard` | 0.02 | 0.25 | +0.0104 |
+
+**A probe that is too easy undoes the control.** Unparsed inputs are admitted to
+the conditioned set, and they decline at 1.0 by definition — the same bias the
+control exists to remove, arriving back through the correction itself.
+
+A probe that is **too hard** is wasteful rather than wrong (+0.0083) — unless its
+difficulty correlates with whatever lowers legibility, in which case it is both
+(+0.0104). Non-random discarding is biased discarding.
+
+How good does the probe have to be? For residual bias under 1 point:
+
+| condition | legibility | max false-pass rate |
+|---|---|---|
+| `text-primary` | 0.99 | 0.995 |
+| `text-low-resource` | 0.61 | 0.080 |
+| `image-low-resource` | 0.38 | **0.030** |
+
+**33x stricter** where legibility is lowest — the probe must be best exactly
+where the study most depends on it, and exactly where a probe is hardest to
+build.
+
+Full tables: [`results/study-design.md`](results/study-design.md).
+[ADR 001](docs/adr/adr-001-report-the-admitted-fraction.md) records what this
+means for how results get reported.
+
 ## Why this matters
 
 The cross-modal safety literature reports refusal rates falling when a harmful
@@ -88,21 +156,24 @@ Full tables: [`results/comprehension-control.md`](results/comprehension-control.
 - **This validates an estimator, not a model.** No model is evaluated here and
   no safety claim is made about any system.
 - **Closed-form, not sampled.** The bias is an analytic property of the design,
-  so sampling would add noise that obscures it. A real study needs confidence
-  intervals, and being unbiased in expectation says nothing about variance at
-  realistic sample sizes.
+  so sampling would add noise that obscures it. Cases 3 and 4 close part of this
+  gap analytically — interval widths, sample-size requirements and probe
+  sensitivity — but a real study still needs sampled intervals rather than
+  planning arithmetic.
 - **Legibility is binary per input.** Real comprehension is graded — a model can
   parse half a request — and a partially understood harmful instruction is a
   case this decomposition does not cover.
-- **The comprehension probe is assumed valid.** In a real study the probe is
-  itself an instrument needing validation: one easier than the task under test
-  would overstate comprehension and under-correct the bias.
+- **Probe error rates are stated, not measured.** Case 4 shows how the
+  estimator responds to probe quality; it says nothing about how good any real
+  probe is. Establishing that is a separate empirical task, and per ADR 001 it
+  has to be done in the hardest condition rather than the easiest.
 
 ## Reproduce
 
 ```bash
 uv sync --extra dev
 uv run python scripts/generate_results.py
+uv run python scripts/generate_design.py
 uv run pytest
 ```
 
