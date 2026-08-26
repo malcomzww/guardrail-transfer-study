@@ -20,22 +20,21 @@ jobs:
       - name: Set up Python
         run: uv python install 3.11
 
-      - name: Install dependencies
+      - name: Install
         run: uv sync --extra dev
 
       - name: Lint
-        run: uv run ruff check src tests
+        run: uv run ruff check .
 
       - name: Test
         run: uv run pytest -q
 
-      # The portfolio's signature check: every number in the README is
-      # generated, so a hand-edited result fails the build rather than
-      # silently drifting from the code that produced it.
-      - name: Verify generated results are current
-        run: |
-          if [ -f scripts/generate_results.py ]; then
-            uv run python scripts/generate_results.py
-            git diff --exit-code results/ \
-              || (echo "results/ is stale -- regenerate and commit" && exit 1)
-          fi
+      # The drift gate. Results are regenerated from source and the run fails
+      # if anything moved, so a hand-edited number in results/ cannot survive a
+      # push. This is the check that makes the README's figures trustworthy
+      # rather than merely asserted.
+      - name: Regenerate results
+        run: uv run python scripts/generate_results.py
+
+      - name: Fail on results drift
+        run: git diff --exit-code results/

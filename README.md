@@ -1,58 +1,113 @@
 # guardrail-transfer-study
 
-> **Not started.** This repo is scaffolded — CI, test harness and the results
-> pipeline are wired, but no code has been written and there are no
-> measurements. The page below is the plan, not a report. It will be rewritten
-> around the result when there is one.
+**A safety evaluation reports up to 12.2 points of apparent cross-condition
+difference on a model whose alignment does not vary at all.** Every point of it
+is a reading-ability artifact.
 
-Do safety guardrails transfer across language and modality, or do cross-modal safety benchmarks mostly measure whether the model can read the image?
+This repo answers one question:
 
-**The one question this repo will answer:**
+> How much of an apparent cross-modal safety gap is a reading-ability artifact
+> rather than an alignment gap?
 
-> How much of the apparent cross-modal safety gap is a reading-ability artifact rather than an alignment gap?
+> **No attack material.** Built and demonstrated on synthetic, harmless
+> prompts. There is no attack corpus here, no published safety benchmark and no
+> jailbreak text — what is under test is the *estimator*, not any model's
+> safety. The dissertation work uses published-benchmark prompts under a release
+> policy requiring supervisor sign-off and aggregate-only reporting, and none of
+> that is in this repository. A test enforces it.
 
-> **Scope constraint.** ETHICS GATE. Published-benchmark prompts only, never novel attacks. No working jailbreak strings in git ever. Aggregate rates only, no per-prompt success transcripts. SAFETY.md stating the question is evaluation validity, not attack improvement. SUPERVISOR SIGN-OFF REQUIRED before public. Scope v1 to two languages and one modality pair.
+## The confound
 
-## Planned method
+A cross-modal safety evaluation reports a refusal rate per condition and reads
+it as alignment strength. But two very different models produce an identical
+observation:
 
-The control arm itself: every prompt in four conditions plus an OCR-only capability probe, yielding the decomposition of the apparent gap.
+- a model that **understood** the request and declined it
+- a model that **could not parse** the input at all
 
-Constraints this repo inherits from the portfolio:
+Both score as a refusal. Both score as a safety pass. So a model that simply
+cannot read a language looks exactly as aligned as one that read the request and
+refused.
 
-- **No GPU.** 24-core CPU, 32 GB RAM, `torch.cuda.is_available()` is False.
-  Anything specced for an accelerator is re-scoped to a CPU-measurable
-  question or shipped with the untested path explicitly labelled.
-- **No live model calls in CI.** Recorded fixtures, so the suite is free and
-  deterministic.
-- **Every committed number is generated** by `scripts/generate_results.py`,
-  carrying its date, hardware, model revision, seed, reproduce command and raw
-  artifact path. Nothing is typed by hand.
-- **Committed results must be machine-independent** — ratios, orderings and
-  invariants. Absolute timings go to a gitignored raw file, because CI
-  regenerates results and fails on any diff.
+The fix is a paired **comprehension probe**: a benign task in the same condition
+that only a model which parsed the input can pass. Conditioning refusals on
+demonstrated comprehension splits the observed gap into an alignment component
+and a perception artifact.
 
-## Paper
+## Case 1: the metric invents a gap
 
-Working paper 2 / dissertation: safety alignment across language and modality
+Every condition below has the **same** true decline rate by construction. Only
+legibility varies.
 
-Publication order is fixed: **repo public → arXiv preprint → workshop submission.** Never inverted.
+| condition | comprehension | naive decline | conditioned | apparent gap | real gap | artifact |
+|---|---|---|---|---|---|---|
+| `text-primary` | 0.99 | 0.802 | 0.800 | — | — | — |
+| `text-secondary` | 0.84 | 0.832 | 0.800 | +3.0 pp | +0.0 pp | **100%** |
+| `text-low-resource` | 0.61 | 0.878 | 0.800 | +7.6 pp | +0.0 pp | **100%** |
+| `image-primary` | 0.72 | 0.856 | 0.800 | +5.4 pp | +0.0 pp | **100%** |
+| `image-low-resource` | 0.38 | 0.924 | 0.800 | +12.2 pp | +0.0 pp | **100%** |
 
-## Concepts covered
+The size of the invented gap tracks legibility exactly. `image-low-resource` has
+the lowest comprehension rate and the largest fabricated gap — which is the same
+ordering a real study would report and read as alignment failure.
 
-- 3C refusal vs capability confounds; guardrail transfer across language and modality (DO-7)
-- 3C jailbreak taxonomies
-- 3C red-teaming methodology, attack success rate as a metric
-- 3C input and output guardrails, refusal design, escalation
-- 2D cross-modal safety, perception confounds, whether benchmarks measure refusal or reading ability
-- 3B construct validity
+## Case 2: the metric hides a real gap
 
-## Status
+An instrument that explains every gap away measures nothing. Here alignment
+genuinely varies, and the naive metric **understates** it:
 
-| | |
-|---|---|
-| scaffold, CI, test harness | done |
-| implementation | **not started** |
-| measurements | **none** |
+| condition | comprehension | naive decline | conditioned | apparent gap | real gap |
+|---|---|---|---|---|---|
+| `text-primary` | 0.99 | 0.861 | 0.860 | — | — |
+| `text-secondary` | 0.84 | 0.756 | 0.710 | −10.5 pp | **−15.0 pp** |
+| `image-primary` | 0.72 | 0.698 | 0.580 | −16.4 pp | **−28.0 pp** |
+
+**The naive metric understates the real gap by 11.6 points** on
+`image-primary`. Non-comprehension inflates the weaker condition's refusal rate
+toward the baseline, so the same confound that invents gaps in case 1 conceals
+them here.
+
+**The bias has no consistent direction**, which is why it cannot be corrected
+with a fudge factor — only with a measurement.
+
+## Why this matters
+
+The cross-modal safety literature reports refusal rates falling when a harmful
+request arrives as an image, or in a lower-resource language, and reads that as
+safety training failing to transfer.
+
+Case 1 shows an evaluation producing exactly that result on a model whose
+alignment does not vary at all. Case 2 shows the same confound concealing a real
+gap. **Neither the presence nor the absence of an apparent gap licenses a
+conclusion about alignment** without a paired comprehension measurement.
+
+Full tables: [`results/comprehension-control.md`](results/comprehension-control.md).
+
+## Limitations
+
+- **This validates an estimator, not a model.** No model is evaluated here and
+  no safety claim is made about any system.
+- **Closed-form, not sampled.** The bias is an analytic property of the design,
+  so sampling would add noise that obscures it. A real study needs confidence
+  intervals, and being unbiased in expectation says nothing about variance at
+  realistic sample sizes.
+- **Legibility is binary per input.** Real comprehension is graded — a model can
+  parse half a request — and a partially understood harmful instruction is a
+  case this decomposition does not cover.
+- **The comprehension probe is assumed valid.** In a real study the probe is
+  itself an instrument needing validation: one easier than the task under test
+  would overstate comprehension and under-correct the bias.
+
+## Reproduce
+
+```bash
+uv sync --extra dev
+uv run python scripts/generate_results.py
+uv run pytest
+```
+
+Closed-form arithmetic — identical output on any machine. CI regenerates the
+results and fails on any diff.
 
 ## License
 
